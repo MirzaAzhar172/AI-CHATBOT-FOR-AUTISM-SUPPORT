@@ -68,4 +68,7 @@ The system is designed to be **scalable**, **research-oriented**, and **clinical
 git clone https://github.com/your-username/your-repo-name.git
 cd your-repo-name
 
+### Dependencies
+Core dependencies are listed in `requirements.txt`.  
+Transitive dependencies are intentionally excluded for clarity and reproducibility.
 
