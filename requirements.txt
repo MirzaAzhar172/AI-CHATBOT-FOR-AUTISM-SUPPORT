@@ -1,0 +1,18 @@
+streamlit>=1.30
+pandas>=2.0
+numpy>=2.0
+
+# NLP & Sentiment Analysis
+nltk
+textblob
+vaderSentiment
+regex
+tqdm
+
+# Visualization
+plotly
+altair
+
+# Utilities
+python-dotenv
+PyPDF2
