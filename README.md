@@ -55,9 +55,16 @@ The system is designed to be **scalable**, **research-oriented**, and **clinical
 
 ---
 
-## 🖥️ Application Preview
+## 🖼️ Application Preview
 
-> Screenshots / demo GIFs will be added soon.
+### 🔹 Main Interface
+![Main Interface](Assets/Screenshot/interface_prismchat.png)
+
+### 🔹 Chat Interface (Extended View)
+![Chat Interface](Assets/Screenshot/interface2_prismchat.png)
+
+### 🔹 Chat History Panel
+![Chat History](Assets/Screenshot/chathistory_prismchat.png)
 
 ---
 
