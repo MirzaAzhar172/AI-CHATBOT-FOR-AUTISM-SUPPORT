@@ -1,0 +1,1303 @@
+import streamlit as st
+import requests
+import os
+import json
+from datetime import datetime
+from dotenv import load_dotenv
+from PIL import Image
+import re
+from collections import Counter
+import plotly.graph_objects as go
+import plotly.express as px
+import pandas as pd
+
+# LANGUAGE TRANSLATIONS
+TRANSLATIONS = {
+    'en': {
+        'app_title': 'PrismCHAT',
+        'app_subtitle': 'Virtual Counsellor Intelligent v1.0',
+        'new_chat': 'New Chat',
+        'chat_history': 'Chat History',
+        'no_history': 'No chat history yet',
+        'quick_help': 'Quick Help',
+        'early_signs': 'Early Signs of Autism',
+        'managing_meltdowns': 'Managing Meltdowns',
+        'support_parents': 'Support for Parents',
+        'session_insight': 'Session Insight',
+        'emotional_state': 'Emotional State:',
+        'calm': 'Calm',
+        'neutral': 'Neutral',
+        'distressed': 'Distressed',
+        'overall': 'Overall',
+        'messages': 'messages',
+        'dark_mode': 'Dark Mode',
+        'light_mode': 'Light Mode',
+        'copyright': '© 2025 PrismCHAT',
+        'developed_by': 'Developed by',
+        'main_heading': 'How can we support you?',
+        'main_subheading': 'Your expert companion for autism support.',
+        'chat_title': 'PrismChat Support',
+        'input_placeholder': 'Ask me anything...',
+        'thinking': 'Thinking...',
+        'api_error': 'API Error.',
+        'connection_failed': 'Connection failed.',
+        'language': 'Language',
+        'language_option': 'Language Option',
+        'system_prompt': 'You are PrismChat, a professional, empathetic, and clear-speaking autism counsellor. Give structured and sensory-friendly advice.',
+        'early_signs_q': 'What are the common early signs of autism?',
+        'meltdowns_q': 'How do I handle an autistic meltdown effectively?',
+        'parents_q': 'What emotional support is available for parents?',
+        'emergency_resources': 'Emergency Resources',
+        'user_profile': 'User Profile',
+        'behavior_tracker': 'Behavior Tracker',
+        'switch_user': 'Switch User',
+        'add_user': 'Add Family Member',
+        'record_behavior': 'Record Event',
+        'view_analytics': 'View Analytics'
+    },
+    'ms': {
+        'app_title': 'PrismCHAT',
+        'app_subtitle': 'Kaunselor Virtual Pintar v1.0',
+        'new_chat': 'Sembang Baru',
+        'chat_history': 'Sejarah Sembang',
+        'no_history': 'Tiada sejarah sembang lagi',
+        'quick_help': 'Bantuan Pantas',
+        'early_signs': 'Tanda Awal Autisme',
+        'managing_meltdowns': 'Menguruskan Kemarahan',
+        'support_parents': 'Sokongan Ibu Bapa',
+        'session_insight': 'Ringkasan Sesi',
+        'emotional_state': 'Keadaan Emosi:',
+        'calm': 'Tenang',
+        'neutral': 'Neutral',
+        'distressed': 'Tertekan',
+        'overall': 'Keseluruhan',
+        'messages': 'mesej',
+        'dark_mode': 'Mod Gelap',
+        'light_mode': 'Mod Terang',
+        'copyright': '© 2025 PrismCHAT',
+        'developed_by': 'Dibangunkan oleh',
+        'main_heading': 'Bagaimana kami boleh bantu anda?',
+        'main_subheading': 'Rakan pakar anda untuk sokongan autisme.',
+        'chat_title': 'Sokongan PrismChat',
+        'input_placeholder': 'Tanya apa sahaja...',
+        'thinking': 'Berfikir...',
+        'api_error': 'Ralat API.',
+        'connection_failed': 'Sambungan gagal.',
+        'language': 'Bahasa',
+        'language_option': 'Pilihan Bahasa',
+        'system_prompt': 'Anda adalah PrismChat, kaunselor autisme yang profesional, empati, dan jelas. Berikan nasihat berstruktur dan mesra deria.',
+        'early_signs_q': 'Apakah tanda-tanda awal autisme yang biasa?',
+        'meltdowns_q': 'Bagaimana saya menangani kemarahan autistik dengan berkesan?',
+        'parents_q': 'Apakah sokongan emosi yang ada untuk ibu bapa?',
+        'emergency_resources': 'Sumber Kecemasan',
+        'user_profile': 'Profil Pengguna',
+        'behavior_tracker': 'Penjejak Tingkah Laku',
+        'switch_user': 'Tukar Pengguna',
+        'add_user': 'Tambah Ahli Keluarga',
+        'record_behavior': 'Rekod Peristiwa',
+        'view_analytics': 'Lihat Analisis'
+    },
+    'zh': {
+        'app_title': 'PrismCHAT',
+        'app_subtitle': '虚拟智能顾问 v1.0',
+        'new_chat': '新对话',
+        'chat_history': '对话历史',
+        'no_history': '暂无对话历史',
+        'quick_help': '快速帮助',
+        'early_signs': '自闭症早期迹象',
+        'managing_meltdowns': '应对情绪崩溃',
+        'support_parents': '家长支持',
+        'session_insight': '会话分析',
+        'emotional_state': '情绪状态：',
+        'calm': '平静',
+        'neutral': '中性',
+        'distressed': '焦虑',
+        'overall': '总体',
+        'messages': '条消息',
+        'dark_mode': '深色模式',
+        'light_mode': '浅色模式',
+        'copyright': '© 2025 PrismCHAT',
+        'developed_by': '开发者',
+        'main_heading': '我们如何帮助您？',
+        'main_subheading': '您的自闭症支持专家伙伴。',
+        'chat_title': 'PrismChat 支持',
+        'input_placeholder': '问我任何问题...',
+        'thinking': '思考中...',
+        'api_error': 'API 错误。',
+        'connection_failed': '连接失败。',
+        'language': '语言',
+        'language_option': '语言选项',
+        'system_prompt': '你是PrismChat，一位专业、富有同理心且表达清晰的自闭症辅导员。请提供结构化且感官友好的建议。',
+        'early_signs_q': '自闭症的常见早期迹象是什么？',
+        'meltdowns_q': '如何有效应对自闭症情绪崩溃？',
+        'parents_q': '有哪些情感支持可供家长使用？',
+        'emergency_resources': '紧急资源',
+        'user_profile': '用户资料',
+        'behavior_tracker': '行为追踪',
+        'switch_user': '切换用户',
+        'add_user': '添加家庭成员',
+        'record_behavior': '记录事件',
+        'view_analytics': '查看分析'
+    }
+}
+
+def get_text(key):
+    """Get translated text based on current language"""
+    lang = st.session_state.get('language', 'en')
+    return TRANSLATIONS.get(lang, TRANSLATIONS['en']).get(key, key)
+
+def get_language_display():
+    """Get current language display name"""
+    lang_map = {
+        'en': 'EN',
+        'ms': 'BM',
+        'zh': '中文'
+    }
+    return lang_map.get(st.session_state.language, 'EN')
+
+# 1. SETUP & STYLING
+load_dotenv()
+API_KEY = os.getenv("OPENROUTER_API_KEY")
+MODEL = ""
+API_URL = "https://openrouter.ai/api/v1/chat/completions"
+
+# Load favicon
+try:
+    favicon = Image.open("prismchat_logo.png")
+    PAGE_ICON = favicon
+except:
+    PAGE_ICON = "🧩"
+
+st.set_page_config(
+    page_title="PrismCHAT", 
+    page_icon=PAGE_ICON,
+    layout="centered", 
+    initial_sidebar_state="expanded" 
+)
+
+# 2. USER PROFILE & MULTI-USER FUNCTIONS
+USERS_FILE = "users.json"
+BEHAVIOR_FILE = "behavior_logs.json"
+
+def load_users():
+    """Load all user profiles"""
+    if os.path.exists(USERS_FILE):
+        try:
+            with open(USERS_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_users(users):
+    """Save user profiles"""
+    try:
+        with open(USERS_FILE, 'w', encoding='utf-8') as f:
+            json.dump(users, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        st.error(f"Error saving users: {e}")
+
+def create_default_user():
+    """Create default user profile"""
+    return {
+        'name': 'Default User',
+        'role': 'Parent',
+        'child_name': '',
+        'child_age': '',
+        'diagnosis': '',
+        'triggers': [],
+        'interests': '',
+        'sensory_needs': '',
+        'communication_style': 'Verbal',
+        'notes': '',
+        'created_at': datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    }
+
+def get_current_user():
+    """Get current active user"""
+    users = load_users()
+    current_user_id = st.session_state.get('current_user_id', 'default')
+    
+    if current_user_id not in users:
+        users['default'] = create_default_user()
+        save_users(users)
+    
+    return users.get(current_user_id, create_default_user())
+
+def load_behavior_logs():
+    """Load behavior tracking logs"""
+    if os.path.exists(BEHAVIOR_FILE):
+        try:
+            with open(BEHAVIOR_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return {}
+    return {}
+
+def save_behavior_logs(logs):
+    """Save behavior logs"""
+    try:
+        with open(BEHAVIOR_FILE, 'w', encoding='utf-8') as f:
+            json.dump(logs, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        st.error(f"Error saving logs: {e}")
+
+def add_behavior_event(event_type, description, intensity, triggers):
+    """Add new behavior event"""
+    logs = load_behavior_logs()
+    user_id = st.session_state.get('current_user_id', 'default')
+    
+    if user_id not in logs:
+        logs[user_id] = []
+    
+    event = {
+        'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        'type': event_type,
+        'description': description,
+        'intensity': intensity,
+        'triggers': triggers,
+        'date': datetime.now().strftime('%Y-%m-%d'),
+        'time': datetime.now().strftime('%H:%M')
+    }
+    
+    logs[user_id].append(event)
+    save_behavior_logs(logs)
+    return True
+
+# 3. SENTIMENT ANALYSIS FUNCTIONS
+def analyze_sentiment(text):
+    """
+    Simple rule-based sentiment analysis for autism support context
+    Returns: sentiment (calm/neutral/distressed) and confidence score
+    """
+    text_lower = text.lower()
+    
+    distressed_keywords = [
+        'help', 'scared', 'anxious', 'worried', 'stress', 'overwhelmed', 
+        'meltdown', 'panic', 'can\'t', 'difficult', 'hard', 'struggle',
+        'frustrated', 'upset', 'angry', 'sad', 'cry', 'alone', 'afraid',
+        'emergency', 'crisis', 'hurt', 'pain'
+    ]
+    
+    calm_keywords = [
+        'thank', 'good', 'better', 'help', 'understand', 'calm', 'peaceful',
+        'relax', 'happy', 'progress', 'improving', 'manageable', 'cope',
+        'comfortable', 'safe', 'ok', 'fine', 'glad'
+    ]
+    
+    distressed_count = sum(1 for word in distressed_keywords if word in text_lower)
+    calm_count = sum(1 for word in calm_keywords if word in text_lower)
+    
+    urgent_patterns = ['emergency', 'crisis', 'immediate help', 'right now', 'can\'t handle']
+    is_urgent = any(pattern in text_lower for pattern in urgent_patterns)
+    
+    question_count = text.count('?')
+    
+    if is_urgent or distressed_count >= 3:
+        return "distressed", "high"
+    elif distressed_count > calm_count:
+        return "distressed", "medium"
+    elif calm_count > distressed_count:
+        return "calm", "medium"
+    elif question_count >= 2:
+        return "neutral", "medium"
+    else:
+        return "neutral", "low"
+
+def get_sentiment_emoji(sentiment):
+    """Return emoji for sentiment"""
+    emoji_map = {
+        "calm": "😊",
+        "neutral": "😐",
+        "distressed": "😟"
+    }
+    return emoji_map.get(sentiment, "😐")
+
+def get_sentiment_color(sentiment):
+    """Return color for sentiment indicator"""
+    color_map = {
+        "calm": "#4CAF50",
+        "neutral": "#FFC107",
+        "distressed": "#F44336"
+    }
+    return color_map.get(sentiment, "#FFC107")
+
+def calculate_session_summary():
+    """Calculate emotion breakdown for current session"""
+    if not st.session_state.messages:
+        return None
+    
+    user_messages = [msg for msg in st.session_state.messages if msg['role'] == 'user']
+    
+    if not user_messages:
+        return None
+    
+    sentiments = []
+    for msg in user_messages:
+        sentiment, _ = analyze_sentiment(msg['content'])
+        sentiments.append(sentiment)
+    
+    sentiment_counts = Counter(sentiments)
+    total = len(sentiments)
+    
+    summary = {
+        'calm': (sentiment_counts.get('calm', 0) / total) * 100,
+        'neutral': (sentiment_counts.get('neutral', 0) / total) * 100,
+        'distressed': (sentiment_counts.get('distressed', 0) / total) * 100,
+        'total_messages': total,
+        'dominant_emotion': max(sentiment_counts, key=sentiment_counts.get) if sentiment_counts else 'neutral'
+    }
+    
+    return summary
+
+# 4. CHAT HISTORY FUNCTIONS
+HISTORY_FILE = "chat_history.json"
+
+def load_chat_history():
+    """Load chat history from JSON file"""
+    if os.path.exists(HISTORY_FILE):
+        try:
+            with open(HISTORY_FILE, 'r', encoding='utf-8') as f:
+                return json.load(f)
+        except:
+            return []
+    return []
+
+def save_chat_history(history):
+    """Save chat history to JSON file"""
+    try:
+        with open(HISTORY_FILE, 'w', encoding='utf-8') as f:
+            json.dump(history, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        st.error(f"Error saving history: {e}")
+
+def save_current_chat():
+    """Save current conversation to history with sentiment data"""
+    if st.session_state.messages and len(st.session_state.messages) > 0:
+        history = load_chat_history()
+        
+        current_chat_id = st.session_state.get('current_chat_id', None)
+        
+        if not current_chat_id:
+            current_chat_id = datetime.now().strftime('%Y%m%d_%H%M%S')
+            st.session_state.current_chat_id = current_chat_id
+        
+        existing_index = next((i for i, chat in enumerate(history) if chat['id'] == current_chat_id), None)
+        
+        first_msg = next((msg['content'][:50] for msg in st.session_state.messages if msg['role'] == 'user'), 'New Chat')
+        
+        sentiment_summary = calculate_session_summary()
+        
+        chat_data = {
+            'id': current_chat_id,
+            'timestamp': datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+            'title': first_msg,
+            'messages': st.session_state.messages.copy(),
+            'sentiment_summary': sentiment_summary,
+            'user_id': st.session_state.get('current_user_id', 'default')
+        }
+        
+        if existing_index is not None:
+            history[existing_index] = chat_data
+        else:
+            history.insert(0, chat_data)
+        
+        history = history[:50]
+        
+        save_chat_history(history)
+        return True
+    return False
+
+def load_chat_by_id(chat_id):
+    """Load a specific chat from history"""
+    history = load_chat_history()
+    for chat in history:
+        if chat['id'] == chat_id:
+            st.session_state.messages = chat['messages'].copy()
+            st.session_state.current_chat_id = chat_id
+            st.rerun()
+
+def delete_chat_by_id(chat_id):
+    """Delete a specific chat from history"""
+    history = load_chat_history()
+    history = [chat for chat in history if chat['id'] != chat_id]
+    save_chat_history(history)
+    st.rerun()
+
+# 5. SESSION STATE
+if "messages" not in st.session_state:
+    st.session_state.messages = []
+if "dark_mode" not in st.session_state:
+    st.session_state.dark_mode = False
+if "show_history" not in st.session_state:
+    st.session_state.show_history = False
+if "show_sentiment" not in st.session_state:
+    st.session_state.show_sentiment = True
+if "current_chat_id" not in st.session_state:
+    st.session_state.current_chat_id = None
+if "language" not in st.session_state:
+    st.session_state.language = 'en'
+if "current_user_id" not in st.session_state:
+    st.session_state.current_user_id = 'default'
+if "show_analytics" not in st.session_state:
+    st.session_state.show_analytics = False
+if "show_profile_page" not in st.session_state:
+    st.session_state.show_profile_page = False
+
+# 6. DYNAMIC THEME & CSS
+if st.session_state.dark_mode:
+    text_color = "#FFFFFF"
+    bg_color = "#121212"
+    sidebar_bg = "#171717"
+    input_bg = "#212121"
+    border_color = "#3d3d3d" 
+    placeholder_color = "#CCCCCC"
+    code_bg = "#2D2D2D"
+    code_text = "#FFFFFF"
+else:
+    text_color = "#1A1A1A"
+    bg_color = "#FFFFFF"
+    sidebar_bg = "#F9F9F9"
+    input_bg = "#F4F4F4"
+    border_color = "#E5E5E5"
+    placeholder_color = "#666666"
+    code_bg = "#E8E8E8"
+    code_text = "#1A1A1A"
+
+st.markdown(f"""
+    <style>
+    /* ROOT & BODY */
+    html, body, #root, .stApp, 
+    [data-testid="stAppViewContainer"], 
+    [data-testid="stHeader"], 
+    [data-testid="stMainViewContainer"] {{
+        background-color: {bg_color} !important;
+        color: {text_color} !important;
+    }}
+
+    /* BLOCKS & CONTAINERS */
+    div, section, article, main,
+    [data-testid="stVerticalBlock"],
+    [data-testid="stHorizontalBlock"],
+    [data-testid="column"],
+    .element-container,
+    .row-widget {{
+        background-color: transparent !important;
+    }}
+
+    /* CHAT INPUT */
+    [data-testid="stChatInput"] textarea {{
+        background-color: {input_bg} !important;
+        color: {text_color} !important; 
+        border: 1.5px solid {border_color} !important;
+        border-radius: 15px !important;
+        padding: 12px !important;
+    }}
+    
+    [data-testid="stChatInput"] textarea::placeholder {{
+        color: {placeholder_color} !important;
+    }}
+
+    /* ======== SIDEBAR ================= */
+    [data-testid="stSidebar"] {{
+        background-color: {sidebar_bg} !important;
+        border-right: 1px solid {border_color} !important;
+    }}
+
+    /* FORCE sidebar text color */
+    [data-testid="stSidebar"] *,
+    [data-testid="stSidebar"] .stMarkdown,
+    [data-testid="stSidebar"] .stMarkdown *,
+    [data-testid="stSidebar"] h1,
+    [data-testid="stSidebar"] h2,
+    [data-testid="stSidebar"] h3,
+    [data-testid="stSidebar"] p,
+    [data-testid="stSidebar"] span,
+    [data-testid="stSidebar"] label,
+    [data-testid="stSidebar"] li {{
+        color: {text_color} !important;
+    }}
+
+    /* BUTTONS */
+    div.stButton > button {{
+        width: 100%;
+        border-radius: 10px;
+        border: 1px solid {border_color} !important;
+        background-color: {input_bg} !important;
+        color: {text_color} !important;
+        transition: all 0.2s;
+    }}
+    
+    div.stButton > button:hover {{
+        border-color: {text_color} !important;
+        opacity: 0.8;
+    }}
+    
+    div.stButton > button p,
+    div.stButton > button span {{
+        color: {text_color} !important;
+    }}
+    
+    /* TEXT ELEMENTS */
+    .stMarkdown h1, .stMarkdown h2, .stMarkdown h3, 
+    .stMarkdown p, .stMarkdown span, .stMarkdown li,
+    .stMarkdown strong, .stMarkdown em {{
+        color: {text_color} !important;
+    }}
+    
+    /* CODE BLOCKS */
+    .stMarkdown code,
+    code {{
+        background-color: {code_bg} !important;
+        color: {code_text} !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        border: 1px solid {border_color} !important;
+    }}
+    
+    /* METRICS */
+    [data-testid="stMetricValue"],
+    [data-testid="stMetricLabel"] {{
+        color: {text_color} !important;
+    }}
+
+    /* INPUT FIELDS */
+    input[type="text"],
+    input[type="number"],
+    textarea,
+    [data-testid="stTextInput"] input,
+    [data-testid="stTextArea"] textarea {{
+        background-color: {input_bg} !important;
+        color: {text_color} !important;
+        border: 1px solid {border_color} !important;
+    }}
+    
+    input::placeholder,
+    textarea::placeholder {{
+        color: {placeholder_color} !important;
+        opacity: 0.7 !important;
+    }}
+    
+    /* SELECTBOX */
+    [data-baseweb="select"],
+    [data-baseweb="select"] *,
+    [role="listbox"],
+    [role="option"] {{
+        background-color: {input_bg} !important;
+        color: {text_color} !important;
+    }}
+    
+    [role="option"]:hover {{
+        background-color: {border_color} !important;
+    }}
+    
+    /* ========== EXPANDERS - NUCLEAR FIX ========== */
+    
+    /* Expander Header - ALL possible selectors */
+    .streamlit-expanderHeader,
+    details summary,
+    summary,
+    [data-testid="stExpander"] summary,
+    div[data-testid="stExpander"] > details > summary {{
+        font-size: 0.9rem !important;
+        padding: 8px 12px !important;
+        background-color: {input_bg} !important;
+        border: 1px solid {border_color} !important;
+        border-radius: 8px !important;
+    }}
+    
+    /* FORCE ALL header text - NUCLEAR APPROACH */
+    .streamlit-expanderHeader,
+    .streamlit-expanderHeader *,
+    .streamlit-expanderHeader p,
+    .streamlit-expanderHeader span,
+    .streamlit-expanderHeader div,
+    details summary,
+    details summary *,
+    details summary p,
+    details summary span,
+    summary,
+    summary *,
+    [data-testid="stExpander"] summary,
+    [data-testid="stExpander"] summary *,
+    [data-testid="stExpander"] summary p,
+    [data-testid="stExpander"] summary span {{
+        color: {text_color} !important;
+    }}
+    
+    /* Arrow icons in ALL states */
+    .streamlit-expanderHeader svg,
+    details summary svg,
+    summary svg,
+    [data-testid="stExpander"] svg {{
+        fill: {text_color} !important;
+        stroke: {text_color} !important;
+    }}
+    
+    /* Expander Content */
+    .streamlit-expanderContent,
+    details > div,
+    [data-testid="stExpander"] > div:not(summary) {{
+        padding: 10px 5px !important;
+        background-color: {sidebar_bg} !important;
+    }}
+    
+    /* ALL content text */
+    .streamlit-expanderContent,
+    .streamlit-expanderContent *,
+    details > div,
+    details > div * {{
+        color: {text_color} !important;
+    }}
+    
+    /* Code blocks in expanders */
+    .streamlit-expanderContent code,
+    details code {{
+        background-color: {code_bg} !important;
+        color: {code_text} !important;
+        padding: 2px 6px !important;
+        border-radius: 4px !important;
+        border: 1px solid {border_color} !important;
+    }}
+    
+    /* Markdown in expanders */
+    .streamlit-expanderContent .stMarkdown,
+    .streamlit-expanderContent .stMarkdown *,
+    details .stMarkdown,
+    details .stMarkdown * {{
+        color: {text_color} !important;
+    }}
+    
+    /* INFO boxes in expanders */
+    .streamlit-expanderContent [data-testid="stInfo"],
+    .streamlit-expanderContent [data-testid="stSuccess"],
+    .streamlit-expanderContent [data-testid="stWarning"],
+    details [data-testid="stInfo"],
+    details [data-testid="stSuccess"],
+    details [data-testid="stWarning"] {{
+        background-color: {input_bg} !important;
+        color: {text_color} !important;
+        border: 1px solid {border_color} !important;
+    }}
+    
+    .streamlit-expanderContent [data-testid="stInfo"] *,
+    .streamlit-expanderContent [data-testid="stSuccess"] *,
+    .streamlit-expanderContent [data-testid="stWarning"] *,
+    details [data-testid="stInfo"] *,
+    details [data-testid="stSuccess"] *,
+    details [data-testid="stWarning"] * {{
+        color: {text_color} !important;
+    }}
+    
+    /* TOGGLE */
+    [data-testid="stToggle"] label {{
+        color: {text_color} !important;
+    }}
+    
+    /* TABS */
+    .stTabs [data-baseweb="tab-list"] {{
+        gap: 8px;
+    }}
+    
+    .stTabs [data-baseweb="tab"] {{
+        background-color: {input_bg} !important;
+        color: {text_color} !important;
+        border-radius: 8px !important;
+        padding: 8px 16px !important;
+    }}
+    
+    .stTabs [aria-selected="true"] {{
+        background-color: {border_color} !important;
+    }}
+    
+    /* Caption */
+    .stCaption {{
+        color: {text_color} !important;
+    }}
+    
+    /* HIDE IMAGE ZOOM */
+    button[title="View fullscreen"] {{
+        display: none !important;
+    }}
+    
+    /* DIVIDER */
+    hr {{
+        border-color: {border_color} !important;
+    }}
+    </style>
+    """, unsafe_allow_html=True)
+
+# 7. SIDEBAR
+with st.sidebar:
+    # Logo
+    try:
+        st.markdown("""
+            <div style='padding: 0 10px; margin-bottom: -20px;'>
+                <img src='data:image/png;base64,{}' style='width: 100%; max-width: 280px; margin: 0 auto; display: block;'>
+            </div>
+        """.format(__import__('base64').b64encode(open('prismchat_logo.png', 'rb').read()).decode()), unsafe_allow_html=True)
+        st.markdown("<div style='margin-top: -20px; margin-bottom: -10px;'></div>", unsafe_allow_html=True)
+    except:
+        st.markdown(f"<h1 style='color:{text_color}; text-align: center;'>🧩 {get_text('app_title')}</h1>", unsafe_allow_html=True)
+    
+    # Current User Display
+    current_user = get_current_user()
+    st.markdown(f"""
+        <p style='text-align: center; 
+                  color: {placeholder_color}; 
+                  font-size: 0.75rem; 
+                  margin: 5px 0 10px 0;'>
+            👤 {current_user['name']}
+        </p>
+    """, unsafe_allow_html=True)
+    
+    # Main Action Buttons
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button(f"+ {get_text('new_chat')}", use_container_width=True):
+            save_current_chat()
+            st.session_state.messages = []
+            st.session_state.current_chat_id = None
+            st.rerun()
+    with col2:
+        if st.button("𖣠 " + get_language_display(), use_container_width=True):
+            langs = ['en', 'ms', 'zh']
+            current_idx = langs.index(st.session_state.language)
+            next_idx = (current_idx + 1) % len(langs)
+            st.session_state.language = langs[next_idx]
+            st.rerun()
+    
+    st.divider()
+    
+    # COLLAPSIBLE SECTIONS
+    
+    # 1. Quick Help
+    with st.expander(" " + get_text('quick_help')):
+        if st.button(f"▸ {get_text('early_signs')}", key="q1"):
+            st.session_state.messages.append({"role": "user", "content": get_text('early_signs_q')})
+            st.rerun()
+        
+        if st.button(f"▸ {get_text('managing_meltdowns')}", key="q2"):
+            st.session_state.messages.append({"role": "user", "content": get_text('meltdowns_q')})
+            st.rerun()
+        
+        if st.button(f"▸ {get_text('support_parents')}", key="q3"):
+            st.session_state.messages.append({"role": "user", "content": get_text('parents_q')})
+            st.rerun()
+    
+    # 2. Emergency Resources
+    with st.expander(" Emergency Resources"):
+        st.markdown("**Crisis Hotlines (MY):**")
+        st.markdown("- Befrienders: `03-7956 8145`")
+        st.markdown("- Mental Health: `03-2935 9935`")
+        st.markdown("- Talian Kasih: `15999`")
+        
+        st.markdown("")
+        
+        st.markdown("**Autism Centers:**")
+        st.markdown("- NASOM: `03-4023 8400`")
+        st.markdown("- Genius Kurnia: `03-4108 5858`")
+    
+    # 3. User Profile - SIMPLIFIED
+    with st.expander(" User Profile"):
+        # Display current profile
+        if current_user.get('child_name'):
+            st.markdown(f"""
+                <div style='background-color: {input_bg}; 
+                            padding: 12px; 
+                            border-radius: 8px; 
+                            margin-bottom: 10px;
+                            border-left: 3px solid #4CAF50;'>
+                    <p style='margin: 0; font-size: 0.85rem; color: {text_color};'>
+                        <strong>👶 {current_user.get('child_name', 'Not set')}</strong>
+                        {', ' + current_user.get('child_age', '') if current_user.get('child_age') else ''}
+                    </p>
+                </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.info("👆 Set up profile to get personalized advice!")
+        
+        # Manage Profile Button
+        if st.button(" Manage Profile", use_container_width=True):
+            st.session_state.show_profile_page = True
+            st.rerun()
+        
+        # Switch User
+        users = load_users()
+        if len(users) > 1:
+            st.divider()
+            user_options = {uid: user['name'] for uid, user in users.items()}
+            selected_user = st.selectbox(
+                "Switch User:",
+                options=list(user_options.keys()),
+                format_func=lambda x: user_options[x],
+                index=list(user_options.keys()).index(st.session_state.current_user_id)
+            )
+            
+            if selected_user != st.session_state.current_user_id:
+                st.session_state.current_user_id = selected_user
+                st.rerun()
+    
+    # 4. Behavior Tracker
+    with st.expander(" Behavior Tracker"):
+        event_type = st.selectbox("Event:", ["Meltdown", "Success", "Other"], label_visibility="collapsed")
+        intensity = st.slider("Intensity:", 1, 10, 5, label_visibility="collapsed")
+        description = st.text_area("Notes:", placeholder="What happened?", label_visibility="collapsed", height=80)
+        
+        if st.button("Add Log Event", use_container_width=True):
+            if description:
+                add_behavior_event(event_type, description, intensity, [])
+                st.success("✓ Logged")
+            else:
+                st.warning("Add notes")
+        
+        st.divider()
+        
+        if st.button("View Analytics", use_container_width=True):
+            st.session_state.show_analytics = True
+            st.rerun()
+    
+    # 5. Chat History - WITH INTEGRATED SENTIMENT
+    with st.expander("▤ " + get_text('chat_history')):
+        history = load_chat_history()
+        current_user_id = st.session_state.get('current_user_id', 'default')
+        user_chats = [chat for chat in history if chat.get('user_id', 'default') == current_user_id]
+        
+        if user_chats:
+            for chat in user_chats[:5]:
+                # Get sentiment data
+                sentiment_info = ""
+                sentiment_bar = ""
+                
+                if 'sentiment_summary' in chat and chat['sentiment_summary']:
+                    summary = chat['sentiment_summary']
+                    dominant = summary.get('dominant_emotion', 'neutral')
+                    emoji = get_sentiment_emoji(dominant)
+                    sentiment_info = f"{emoji} "
+                    
+                    # Create compact sentiment bar
+                    calm_pct = summary.get('calm', 0)
+                    neutral_pct = summary.get('neutral', 0)
+                    distressed_pct = summary.get('distressed', 0)
+                    
+                    sentiment_bar = f"Calm {calm_pct:.0f}%   /   Neutral {neutral_pct:.0f}%   /   Distressed {distressed_pct:.0f}%"
+                
+                # Chat title button
+                col1, col2 = st.columns([4, 1])
+                
+                with col1:
+                    if st.button(
+                        f"{sentiment_info}{chat['title'][:25]}...",
+                        key=f"load_{chat['id']}",
+                        use_container_width=True
+                    ):
+                        current_chat_id = st.session_state.get('current_chat_id', None)
+                        if current_chat_id != chat['id']:
+                            save_current_chat()
+                        load_chat_by_id(chat['id'])
+                
+                with col2:
+                    if st.button("✕", key=f"del_{chat['id']}"):
+                        delete_chat_by_id(chat['id'])
+                
+                # Sentiment breakdown (clean boxes)
+                if sentiment_bar:
+                    calm_pct = summary.get('calm', 0)
+                    neutral_pct = summary.get('neutral', 0)
+                    distressed_pct = summary.get('distressed', 0)
+                    
+                    st.markdown(f"""
+                        <div style='display: flex; 
+                                    gap: 6px; 
+                                    margin: -8px 0 10px 0;
+                                    justify-content: center;'>
+                            <div style='background-color: {input_bg}; 
+                                        padding: 6px 10px; 
+                                        border-radius: 6px; 
+                                        font-size: 0.8rem;
+                                        text-align: center;
+                                        border: 1px solid {border_color};
+                                        flex: 1;'>
+                                Calm =   {calm_pct:.0f}%
+                            </div>
+                            <div style='background-color: {input_bg}; 
+                                        padding: 6px 10px; 
+                                        border-radius: 6px; 
+                                        font-size: 0.8rem;
+                                        text-align: center;
+                                        border: 1px solid {border_color};
+                                        flex: 1;'>
+                                Neutral =   {neutral_pct:.0f}%
+                            </div>
+                            <div style='background-color: {input_bg}; 
+                                        padding: 6px 10px; 
+                                        border-radius: 6px; 
+                                        font-size: 0.8rem;
+                                        text-align: center;
+                                        border: 1px solid {border_color};
+                                        flex: 1;'>
+                                Stress =  {distressed_pct:.0f}%
+                            </div>
+                        </div>
+                    """, unsafe_allow_html=True)
+
+    
+    # ========== TOGGLE DARK MODE / LIGHT MODE) ========== #
+    
+    # Theme Toggle
+    dark_mode_on = st.toggle(
+        f"{'◐ ' + get_text('dark_mode') if st.session_state.dark_mode else '◯ ' + get_text('light_mode')}",
+        value=st.session_state.dark_mode
+    )
+    
+    if dark_mode_on != st.session_state.dark_mode:
+        st.session_state.dark_mode = dark_mode_on
+        st.rerun()
+
+    # Footer
+    st.markdown(f"""
+        <div style='text-align: center; 
+                    padding: 15px 0 5px 0;
+                    color: {placeholder_color};
+                    font-size: 0.7rem;'>
+            <p style='margin: 0;'>
+                {get_text('copyright')}<br>
+                <strong>@Mirza Azhar</strong>
+            </p>
+        </div>
+    """, unsafe_allow_html=True)
+
+# 8. PROFILE MANAGEMENT PAGE
+if st.session_state.show_profile_page:
+    st.title(" Profile Management")
+    
+    current_user = get_current_user()
+    users = load_users()
+    
+    # Back button
+    if st.button("← Back to Chat"):
+        st.session_state.show_profile_page = False
+        st.rerun()
+    
+    st.divider()
+    
+    # Tabs
+    tab1, tab2 = st.tabs([" Child Profile", "Family Members"])
+    
+    with tab1:
+        st.subheader("Child Information")
+        
+        col1, col2 = st.columns([2, 1])
+        
+        with col1:
+            child_name = st.text_input(
+                "Child's Name *",
+                value=current_user.get('child_name', ''),
+                placeholder="e.g., Ahmad"
+            )
+            
+            child_age = st.text_input(
+                "Age",
+                value=current_user.get('child_age', ''),
+                placeholder="e.g., 5 years old"
+            )
+            
+            diagnosis = st.text_area(
+                "Diagnosis",
+                value=current_user.get('diagnosis', ''),
+                placeholder="e.g., ASD Level 2, ADHD",
+                height=100
+            )
+        
+        with col2:
+            st.info("""
+            **Why provide info?**
+            
+            ✅ Personalized advice
+            ✅ Age-appropriate tips
+            ✅ Context-aware support
+            ✅ Better recommendations
+            """)
+        
+        st.divider()
+        
+        st.subheader("Additional Details")
+        
+        col3, col4 = st.columns(2)
+        
+        with col3:
+            triggers_input = st.text_area(
+                "Known Triggers (one per line)",
+                value='\n'.join(current_user.get('triggers', [])),
+                placeholder="e.g., Loud noises\nCrowds",
+                height=120
+            )
+            
+            communication_style = st.selectbox(
+                "Communication Style",
+                ["Verbal", "Non-verbal", "Limited verbal", "Uses AAC device"],
+                index=["Verbal", "Non-verbal", "Limited verbal", "Uses AAC device"].index(
+                    current_user.get('communication_style', 'Verbal')
+                )
+            )
+        
+        with col4:
+            interests = st.text_area(
+                "Interests & Strengths",
+                value=current_user.get('interests', ''),
+                placeholder="e.g., Loves trains",
+                height=120
+            )
+            
+            sensory_needs = st.text_area(
+                "Sensory Needs",
+                value=current_user.get('sensory_needs', ''),
+                placeholder="e.g., Needs quiet space",
+                height=120
+            )
+        
+        notes = st.text_area(
+            "Additional Notes",
+            value=current_user.get('notes', ''),
+            placeholder="Any other important information...",
+            height=100
+        )
+        
+        # Save button
+        col_save1, col_save2, col_save3 = st.columns([1, 1, 1])
+        
+        with col_save2:
+            if st.button("💾 Save Profile", use_container_width=True, type="primary"):
+                if child_name:
+                    user_id = st.session_state.current_user_id
+                    users[user_id]['child_name'] = child_name
+                    users[user_id]['child_age'] = child_age
+                    users[user_id]['diagnosis'] = diagnosis
+                    users[user_id]['triggers'] = [t.strip() for t in triggers_input.split('\n') if t.strip()]
+                    users[user_id]['communication_style'] = communication_style
+                    users[user_id]['interests'] = interests
+                    users[user_id]['sensory_needs'] = sensory_needs
+                    users[user_id]['notes'] = notes
+                    
+                    save_users(users)
+                    st.success(f"✅ Profile saved for {child_name}!")
+                    st.balloons()
+                else:
+                    st.error("❌ Please enter child's name")
+    
+    with tab2:
+        st.subheader("Family Members")
+        
+        # Display all users
+        for user_id, user in users.items():
+            col1, col2, col3 = st.columns([3, 1, 1])
+            
+            with col1:
+                is_current = user_id == st.session_state.current_user_id
+                st.markdown(f"""
+                    {'**➤ ' if is_current else ''}
+                    {user['name']} ({user['role']})
+                    {' (Current)**' if is_current else ''}
+                """)
+            
+            with col2:
+                if not is_current:
+                    if st.button("Switch", key=f"switch_{user_id}"):
+                        st.session_state.current_user_id = user_id
+                        st.rerun()
+            
+            with col3:
+                if user_id != 'default' and not is_current:
+                    if st.button("Delete", key=f"delete_{user_id}"):
+                        del users[user_id]
+                        save_users(users)
+                        st.success(f"Deleted {user['name']}")
+                        st.rerun()
+        
+        st.divider()
+        
+        # Add new member
+        st.subheader("Add Family Member")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            new_name = st.text_input("Name", placeholder="e.g., Ayah")
+        
+        with col2:
+            new_role = st.selectbox("Role", ["Parent", "Caregiver", "Therapist", "Teacher", "Other"])
+        
+        if st.button("➕ Add Member", use_container_width=True):
+            if new_name:
+                new_user_id = f"user_{len(users)}"
+                users[new_user_id] = create_default_user()
+                users[new_user_id]['name'] = new_name
+                users[new_user_id]['role'] = new_role
+                save_users(users)
+                st.success(f" Added {new_name}!")
+                st.rerun()
+            else:
+                st.error("Please enter a name")
+    
+    st.stop()
+
+# 9. BEHAVIOR ANALYTICS PAGE
+if st.session_state.show_analytics:
+    st.title(" Behavior Analytics")
+    
+    logs = load_behavior_logs()
+    user_id = st.session_state.get('current_user_id', 'default')
+    user_logs = logs.get(user_id, [])
+    
+    if st.button("← Back to Chat"):
+        st.session_state.show_analytics = False
+        st.rerun()
+    
+    st.divider()
+    
+    if user_logs:
+        df = pd.DataFrame(user_logs)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['date'] = pd.to_datetime(df['date'])
+        
+        # Metrics
+        col1, col2, col3, col4 = st.columns(4)
+        
+        with col1:
+            st.metric("Total Events", len(df))
+        with col2:
+            meltdown_count = len(df[df['type'] == 'Meltdown'])
+            st.metric("Meltdowns", meltdown_count)
+        with col3:
+            if len(df) > 0:
+                avg_intensity = df['intensity'].mean()
+                st.metric("Avg Intensity", f"{avg_intensity:.1f}/10")
+        with col4:
+            success_count = len(df[df['type'] == 'Success'])
+            st.metric("Successes", success_count)
+        
+        st.divider()
+        
+        # Charts
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            event_counts = df['type'].value_counts()
+            fig1 = px.pie(
+                values=event_counts.values,
+                names=event_counts.index,
+                title="Event Distribution"
+            )
+            st.plotly_chart(fig1, use_container_width=True)
+        
+        with col2:
+            fig2 = px.box(
+                df,
+                x='type',
+                y='intensity',
+                title="Intensity by Type",
+                color='type'
+            )
+            st.plotly_chart(fig2, use_container_width=True)
+        
+        # Timeline
+        daily_counts = df.groupby('date').size().reset_index(name='count')
+        fig3 = px.line(
+            daily_counts,
+            x='date',
+            y='count',
+            title="Events Over Time",
+            markers=True
+        )
+        st.plotly_chart(fig3, use_container_width=True)
+        
+        # Recent Events
+        st.subheader("Recent Events")
+        recent_df = df.sort_values('timestamp', ascending=False).head(10)
+        display_df = recent_df[['timestamp', 'type', 'intensity', 'description']].copy()
+        st.dataframe(display_df, use_container_width=True)
+        
+    else:
+        st.info("No data yet. Start logging events!")
+    
+    st.stop()
+
+# 10. MAIN CHAT UI
+if not st.session_state.messages:
+    st.markdown(f"""
+        <div style='margin-top: 15vh; text-align: center;'>
+            <h1 style='color: {text_color}; font-size: 3rem; font-weight: 700;'>{get_text('main_heading')}</h1>
+            <p style='color: #888888; font-size: 1.2rem;'>{get_text('main_subheading')}</p>
+        </div>
+    """, unsafe_allow_html=True)
+else:
+    st.markdown(f"""
+        <div style='text-align: center; padding: 10px; border-bottom: 1px solid {border_color}; margin-bottom: 20px;'>
+            <h3 style='color: {text_color};'>{get_text('chat_title')}</h3>
+        </div>
+    """, unsafe_allow_html=True)
+
+# Display messages
+for i, msg in enumerate(st.session_state.messages):
+    with st.chat_message(msg["role"]):
+        if msg["role"] == "user" and st.session_state.show_sentiment:
+            sentiment, confidence = analyze_sentiment(msg["content"])
+            emoji = get_sentiment_emoji(sentiment)
+            color = get_sentiment_color(sentiment)
+            
+            st.markdown(f"""
+                <div style='display: flex; align-items: center; gap: 8px;'>
+                    <span style='font-size: 1.2rem;'>{emoji}</span>
+                    <span style='color: {color}; font-size: 0.75rem; font-weight: 500;'>{get_text(sentiment).title()}</span>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.markdown(msg["content"])
+
+# 11. INPUT LOGIC
+user_input = st.chat_input(get_text('input_placeholder'))
+
+if user_input:
+    st.session_state.messages.append({"role": "user", "content": user_input})
+    st.rerun()
+
+if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+    with st.chat_message("assistant"):
+        with st.spinner(get_text('thinking')):
+            try:
+                current_user = get_current_user()
+                profile_context = ""
+                
+                if current_user.get('child_name'):
+                    profile_context += f"\nChild's name: {current_user['child_name']}"
+                if current_user.get('child_age'):
+                    profile_context += f"\nChild's age: {current_user['child_age']}"
+                if current_user.get('diagnosis'):
+                    profile_context += f"\nDiagnosis: {current_user['diagnosis']}"
+                if current_user.get('triggers'):
+                    profile_context += f"\nKnown triggers: {', '.join(current_user['triggers'])}"
+                if current_user.get('communication_style'):
+                    profile_context += f"\nCommunication: {current_user['communication_style']}"
+                if current_user.get('sensory_needs'):
+                    profile_context += f"\nSensory needs: {current_user['sensory_needs']}"
+                
+                system_prompt = get_text('system_prompt')
+                if profile_context:
+                    system_prompt += f"\n\nIMPORTANT - User Profile Context:{profile_context}"
+                    system_prompt += f"\nPlease personalize your responses based on this child's profile. Use their name when appropriate."
+                
+                headers = {"Authorization": f"Bearer {API_KEY}", "Content-Type": "application/json"}
+                payload = {
+                    "model": MODEL,
+                    "messages": [{"role": "system", "content": system_prompt}] + st.session_state.messages,
+                    "temperature": 0.5
+                }
+                response = requests.post(API_URL, headers=headers, json=payload, timeout=60)
+                if response.status_code == 200:
+                    reply = response.json()["choices"][0]["message"]["content"]
+                    st.markdown(reply)
+                    st.session_state.messages.append({"role": "assistant", "content": reply})
+                else:
+                    st.error(get_text('api_error'))
+            except:
+                st.error(get_text('connection_failed'))
