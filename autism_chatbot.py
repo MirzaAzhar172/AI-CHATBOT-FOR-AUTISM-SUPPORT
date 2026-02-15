@@ -701,6 +701,8 @@ if "show_analytics" not in st.session_state:
     st.session_state.show_analytics = False
 if "show_profile_page" not in st.session_state:
     st.session_state.show_profile_page = False
+if "show_pattern_insights" not in st.session_state:
+    st.session_state.show_pattern_insights = False
 
 # 6. DYNAMIC THEME & CSS
 if st.session_state.dark_mode:
@@ -1159,8 +1161,8 @@ st.markdown(f"""
 if "show_settings_page" not in st.session_state:
     st.session_state.show_settings_page = False
 
-# 7. SIDEBAR (Only show when NOT in settings page)
-if not st.session_state.show_settings_page:
+# 7. SIDEBAR (Only show when NOT in settings page or pattern insights)
+if not st.session_state.show_settings_page and not st.session_state.show_pattern_insights:
     with st.sidebar:
         # Logo
         try:
@@ -1200,7 +1202,31 @@ if not st.session_state.show_settings_page:
         
         # COLLAPSIBLE SECTIONS - MINIMAL ICONS
         
-        # 1. Quick Help
+        # 1. Quick Actions (NEW - Crisis Response Cards)
+        with st.expander("Quick Actions"):
+            quick_action_clicked = None
+            
+            if st.button("Calming Strategies", use_container_width=True, key="qa_calming"):
+                quick_action_clicked = "My child is having a meltdown right now. What are immediate calming strategies I can use?"
+            
+            if st.button("Visual Supports", use_container_width=True, key="qa_visual"):
+                quick_action_clicked = "What visual supports can help my child understand expectations and routines better?"
+            
+            if st.button("Emergency Steps", use_container_width=True, key="qa_emergency"):
+                quick_action_clicked = "This is an emergency situation with my child. What should I do right now? Step by step please."
+            
+            if st.button("Breathing Exercise", use_container_width=True, key="qa_breathing"):
+                quick_action_clicked = "Guide me through a calming breathing exercise I can do with my child right now."
+            
+            if st.button("Sensory Regulation", use_container_width=True, key="qa_sensory"):
+                quick_action_clicked = "What sensory regulation activities can I do with my child to help them calm down?"
+            
+            # If any quick action clicked, add to messages and trigger response
+            if quick_action_clicked:
+                st.session_state.messages.append({"role": "user", "content": quick_action_clicked})
+                st.rerun()
+        
+        # 2. Quick Help
         with st.expander(get_text('quick_help')):
             if st.button(f"› {get_text('early_signs')}", key="q1"):
                 st.session_state.messages.append({"role": "user", "content": get_text('early_signs_q')})
@@ -1281,7 +1307,7 @@ if not st.session_state.show_settings_page:
                         if st.button("×", key=f"del_{chat['id']}"):
                             delete_chat_by_id(chat['id'])
                     
-                    # Sentiment breakdown - MINIMALIST BARS WITH LABELS
+                    # Sentiment breakdown - STACKED BAR (Option 4: Professional & Clean)
                     if 'sentiment_summary' in chat and chat['sentiment_summary']:
                         summary = chat['sentiment_summary']
                         calm_pct = summary.get('calm', 0)
@@ -1289,36 +1315,60 @@ if not st.session_state.show_settings_page:
                         distressed_pct = summary.get('distressed', 0)
                         
                         st.markdown(f"""
-                            <div style='margin: -8px 0 10px 0;'>
-                                <!-- Progress Bar -->
-                                <div style='display: flex; 
-                                            gap: 4px; 
-                                            height: 4px;
-                                            border-radius: 2px;
-                                            overflow: hidden;
-                                            margin-bottom: 4px;'>
-                                    <div style='flex: {calm_pct}; 
-                                                background: #4CAF50;'></div>
-                                    <div style='flex: {neutral_pct}; 
-                                                background: #FFC107;'></div>
-                                    <div style='flex: {distressed_pct}; 
-                                                background: #F44336;'></div>
-                                </div>
-                                <!-- Labels -->
-                                <div style='display: flex; 
-                                            justify-content: space-between; 
-                                            font-size: 0.65rem; 
-                                            color: {placeholder_color};
-                                            font-weight: 500;
-                                            letter-spacing: 0.02em;'>
-                                    <span>C: {calm_pct:.0f}%</span>
-                                    <span>N: {neutral_pct:.0f}%</span>
-                                    <span>D: {distressed_pct:.0f}%</span>
+                            <div style='margin: -8px 0 12px 0;'>
+                                <!-- Stacked Progress Bar with Border -->
+                                <div style='background-color: {input_bg};
+                                            border: 1px solid {border_color};
+                                            border-radius: 8px;
+                                            padding: 8px;
+                                            overflow: hidden;'>
+                                    <!-- Stacked Bar -->
+                                    <div style='display: flex; 
+                                                height: 8px;
+                                                border-radius: 6px;
+                                                overflow: hidden;
+                                                margin-bottom: 6px;
+                                                box-shadow: inset 0 1px 2px rgba(0,0,0,0.1);'>
+                                        <div style='flex: {calm_pct}; 
+                                                    background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+                                                    transition: all 0.3s ease;'
+                                             title='Calm: {calm_pct:.0f}%'></div>
+                                        <div style='flex: {neutral_pct}; 
+                                                    background: linear-gradient(135deg, #FFC107 0%, #ffb300 100%);
+                                                    transition: all 0.3s ease;'
+                                             title='Neutral: {neutral_pct:.0f}%'></div>
+                                        <div style='flex: {distressed_pct}; 
+                                                    background: linear-gradient(135deg, #F44336 0%, #e53935 100%);
+                                                    transition: all 0.3s ease;'
+                                             title='Distressed: {distressed_pct:.0f}%'></div>
+                                    </div>
+                                    <!-- Labels Row with Emojis -->
+                                    <div style='display: flex; 
+                                                justify-content: space-between; 
+                                                font-size: 0.7rem; 
+                                                font-weight: 500;
+                                                padding: 0 2px;'>
+                                        <span style='color: #4CAF50;'>😊 {calm_pct:.0f}%</span>
+                                        <span style='color: #FFC107;'>😐 {neutral_pct:.0f}%</span>
+                                        <span style='color: #F44336;'>😟 {distressed_pct:.0f}%</span>
+                                    </div>
                                 </div>
                             </div>
                         """, unsafe_allow_html=True)
             else:
                 st.info(get_text('no_history_yet'))
+        
+        # Spacer before Pattern Insights
+        st.markdown(f"""
+            <div style='margin: 24px 0; 
+                        border-top: 2px solid {border_color};'>
+            </div>
+        """, unsafe_allow_html=True)
+        
+        # Pattern Insights Button (NEW)
+        if st.button("Pattern Insights", use_container_width=True, key="pattern_insights_btn"):
+            st.session_state.show_pattern_insights = True
+            st.rerun()
         
         # Spacer before Settings & Footer
         st.markdown(f"""
@@ -1349,6 +1399,271 @@ if not st.session_state.show_settings_page:
 
 
 
+
+
+# 7.5. PATTERN INSIGHTS PAGE (NEW - AI-Powered Analysis)
+if st.session_state.show_pattern_insights:
+    st.title("Pattern Insights")
+    
+    # Back button
+    if st.button(f"← {get_text('back')}"):
+        st.session_state.show_pattern_insights = False
+        st.rerun()
+    
+    st.divider()
+    
+    # Load behavior logs
+    logs = load_behavior_logs()
+    user_id = st.session_state.get('current_user_id', 'default')
+    user_logs = logs.get(user_id, [])
+    
+    if user_logs and len(user_logs) >= 3:
+        # Convert to DataFrame for analysis
+        df = pd.DataFrame(user_logs)
+        df['timestamp'] = pd.to_datetime(df['timestamp'])
+        df['date'] = pd.to_datetime(df['date'])
+        df['hour'] = df['timestamp'].dt.hour
+        df['day_of_week'] = df['timestamp'].dt.day_name()
+        
+        # Trigger Analysis
+        st.subheader("Trigger Analysis")
+        st.markdown(f"""
+            <div style='background-color: {input_bg}; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        border: 1px solid {border_color};
+                        margin-bottom: 20px;'>
+        """, unsafe_allow_html=True)
+        
+        # Count triggers
+        all_triggers = []
+        for log in user_logs:
+            all_triggers.extend(log.get('triggers', []))
+        
+        if all_triggers:
+            trigger_counts = Counter(all_triggers)
+            top_triggers = trigger_counts.most_common(5)
+            
+            st.markdown(f"<h4 style='color: {text_color}; margin-top: 0;'>Most Common Triggers (Last 30 Days)</h4>", unsafe_allow_html=True)
+            
+            for trigger, count in top_triggers:
+                percentage = (count / len(user_logs)) * 100
+                st.markdown(f"""
+                    <div style='margin-bottom: 12px;'>
+                        <div style='display: flex; justify-content: space-between; margin-bottom: 4px;'>
+                            <span style='color: {text_color}; font-weight: 500;'>{trigger}</span>
+                            <span style='color: {placeholder_color};'>{count} events ({percentage:.0f}%)</span>
+                        </div>
+                        <div style='background-color: {bg_color}; 
+                                    height: 8px; 
+                                    border-radius: 4px; 
+                                    overflow: hidden;'>
+                            <div style='width: {percentage}%; 
+                                        height: 100%; 
+                                        background: linear-gradient(90deg, {accent_color} 0%, #9333EA 100%);'></div>
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.info("No specific triggers recorded yet. Add triggers when logging events.")
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Time Pattern Analysis
+        st.subheader("Time Patterns")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown(f"""
+                <div style='background-color: {input_bg}; 
+                            padding: 20px; 
+                            border-radius: 10px; 
+                            border: 1px solid {border_color};'>
+                    <h4 style='color: {text_color}; margin-top: 0;'>Events by Hour</h4>
+            """, unsafe_allow_html=True)
+            
+            # Hour distribution
+            hour_counts = df['hour'].value_counts().sort_index()
+            fig_hour = px.bar(
+                x=hour_counts.index,
+                y=hour_counts.values,
+                labels={'x': 'Hour of Day', 'y': 'Number of Events'},
+                color=hour_counts.values,
+                color_continuous_scale='Purples'
+            )
+            fig_hour.update_layout(
+                showlegend=False,
+                height=300,
+                margin=dict(l=0, r=0, t=0, b=0)
+            )
+            st.plotly_chart(fig_hour, use_container_width=True)
+            
+            # Peak hours
+            peak_hour = hour_counts.idxmax()
+            st.markdown(f"""
+                <p style='color: {text_color}; margin: 10px 0 0 0;'>
+                    <strong>Peak Hour:</strong> {peak_hour}:00 - {peak_hour+1}:00
+                </p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        with col2:
+            st.markdown(f"""
+                <div style='background-color: {input_bg}; 
+                            padding: 20px; 
+                            border-radius: 10px; 
+                            border: 1px solid {border_color};'>
+                    <h4 style='color: {text_color}; margin-top: 0;'>Events by Day</h4>
+            """, unsafe_allow_html=True)
+            
+            # Day of week distribution
+            day_order = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']
+            day_counts = df['day_of_week'].value_counts()
+            day_counts = day_counts.reindex(day_order, fill_value=0)
+            
+            fig_day = px.bar(
+                x=day_counts.index,
+                y=day_counts.values,
+                labels={'x': 'Day of Week', 'y': 'Number of Events'},
+                color=day_counts.values,
+                color_continuous_scale='Purples'
+            )
+            fig_day.update_layout(
+                showlegend=False,
+                height=300,
+                margin=dict(l=0, r=0, t=0, b=0)
+            )
+            fig_day.update_xaxis(tickangle=-45)
+            st.plotly_chart(fig_day, use_container_width=True)
+            
+            # Difficult day
+            difficult_day = day_counts.idxmax()
+            st.markdown(f"""
+                <p style='color: {text_color}; margin: 10px 0 0 0;'>
+                    <strong>Most Challenging:</strong> {difficult_day}s
+                </p>
+                </div>
+            """, unsafe_allow_html=True)
+        
+        st.divider()
+        
+        # Intensity Trends
+        st.subheader("Intensity Trends")
+        st.markdown(f"""
+            <div style='background-color: {input_bg}; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        border: 1px solid {border_color};
+                        margin-bottom: 20px;'>
+        """, unsafe_allow_html=True)
+        
+        # Timeline chart
+        daily_intensity = df.groupby('date')['intensity'].mean().reset_index()
+        fig_trend = px.line(
+            daily_intensity,
+            x='date',
+            y='intensity',
+            labels={'date': 'Date', 'intensity': 'Average Intensity'},
+            markers=True
+        )
+        fig_trend.update_traces(line_color=accent_color)
+        fig_trend.update_layout(
+            height=300,
+            margin=dict(l=0, r=0, t=0, b=0)
+        )
+        st.plotly_chart(fig_trend, use_container_width=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # AI-Generated Recommendations
+        st.subheader("AI Recommendations")
+        st.markdown(f"""
+            <div style='background-color: {input_bg}; 
+                        padding: 20px; 
+                        border-radius: 10px; 
+                        border-left: 3px solid {accent_color};
+                        margin-bottom: 20px;'>
+                <h4 style='color: {text_color}; margin-top: 0;'>Insights Based on Your Data</h4>
+        """, unsafe_allow_html=True)
+        
+        # Generate insights
+        meltdown_count = len(df[df['type'] == 'Meltdown'])
+        avg_intensity = df['intensity'].mean()
+        peak_hour = df['hour'].value_counts().idxmax()
+        difficult_day = df['day_of_week'].value_counts().idxmax()
+        
+        insights = []
+        
+        if peak_hour >= 15 and peak_hour <= 18:
+            insights.append(f"Events peak between {peak_hour}:00-{peak_hour+1}:00. Consider scheduling calming activities before this time.")
+        
+        if difficult_day in ['Monday', 'Friday']:
+            insights.append(f"{difficult_day}s show higher event frequency. Prepare extra support on these days.")
+        
+        if avg_intensity > 7:
+            insights.append("Average intensity is high. Focus on early intervention and trigger avoidance.")
+        elif avg_intensity < 4:
+            insights.append("Good progress! Current strategies seem effective.")
+        
+        if meltdown_count > len(df) * 0.5:
+            insights.append("Meltdowns are frequent. Consider consulting with therapist for additional strategies.")
+        
+        if insights:
+            for insight in insights:
+                st.markdown(f"""
+                    <div style='padding: 8px 0;'>
+                        <span style='color: {text_color}; line-height: 1.6;'>• {insight}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"<p style='color: {text_color};'>Continue logging events to generate more insights.</p>", unsafe_allow_html=True)
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+        
+        # Ask AI About Patterns
+        st.divider()
+        
+        if st.button("Ask AI About These Patterns", use_container_width=True, type="primary"):
+            # Generate summary for AI
+            pattern_summary = f"""Based on behavior data:
+- Total events: {len(df)}
+- Meltdowns: {meltdown_count}
+- Average intensity: {avg_intensity:.1f}/10
+- Peak hour: {peak_hour}:00
+- Difficult day: {difficult_day}
+- Top triggers: {', '.join([t[0] for t in trigger_counts.most_common(3)])}
+
+What specific strategies do you recommend based on these patterns?"""
+            
+            st.session_state.messages.append({"role": "user", "content": pattern_summary})
+            st.session_state.show_pattern_insights = False
+            st.rerun()
+    
+    else:
+        # Not enough data
+        st.info("Not enough behavior data yet. Log at least 3 events to see pattern insights.")
+        
+        st.markdown(f"""
+            <div style='background-color: {input_bg}; 
+                        padding: 30px; 
+                        border-radius: 10px; 
+                        border: 1px solid {border_color};
+                        text-align: center;
+                        margin-top: 40px;'>
+                <h3 style='color: {text_color};'>Start Tracking Behaviors</h3>
+                <p style='color: {placeholder_color}; margin: 20px 0;'>
+                    Log meltdowns, successes, and other events in the Behavior Tracker to unlock pattern insights.
+                </p>
+        """, unsafe_allow_html=True)
+        
+        if st.button("Go to Behavior Tracker", use_container_width=True, type="primary"):
+            st.session_state.show_pattern_insights = False
+            st.rerun()
+        
+        st.markdown("</div>", unsafe_allow_html=True)
+    
+    st.stop()
 
 
 # 8. SETTINGS PAGE - MINIMALIST DESIGN
@@ -1876,6 +2191,7 @@ if not st.session_state.show_settings_page and not st.session_state.show_analyti
                 """, unsafe_allow_html=True)
             
             st.markdown(msg["content"])
+            
 
     # 11. INPUT LOGIC
     user_input = st.chat_input(get_text('input_placeholder'))
