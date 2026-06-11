@@ -416,7 +416,7 @@ def get_language_display():
 # 1. SETUP & STYLING
 load_dotenv()
 API_KEY = os.getenv("OPENROUTER_API_KEY")
-MODEL = ""
+MODEL = "deepseek/deepseek-v4-flash:free"
 API_URL = "https://openrouter.ai/api/v1/chat/completions"
 
 # Load favicon
@@ -435,6 +435,7 @@ st.set_page_config(
 
 # 2. USER PROFILE & MULTI-USER FUNCTIONS
 USERS_FILE = "users.json"
+
 BEHAVIOR_FILE = "behavior_logs.json"
 
 def load_users():
@@ -534,7 +535,7 @@ def analyze_sentiment(text):
         'help', 'scared', 'anxious', 'worried', 'stress', 'overwhelmed', 
         'meltdown', 'panic', 'can\'t', 'difficult', 'hard', 'struggle',
         'frustrated', 'upset', 'angry', 'sad', 'cry', 'alone', 'afraid',
-        'emergency', 'crisis', 'hurt', 'pain'
+        'emergency', 'crisis', 'hurt', 'pain', 'exhausted'
     ]
     
     calm_keywords = [
